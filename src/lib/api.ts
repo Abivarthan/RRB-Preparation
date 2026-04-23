@@ -268,7 +268,7 @@ export async function generateTopicTest(topic: string, questionCount = 10, supab
   const { data: questions, error } = await client.rpc('get_random_questions_v2', {
     p_topic: topic,
     p_limit: questionCount,
-  }).select('id, topic, subtopic, difficulty, question, options, correct_answer, explanation') as { data: Question[] | null, error: any };
+  }).select('id, topic, subtopic, difficulty, question, options, correct_answer, explanation, created_at') as { data: Question[] | null, error: any };
 
   if (!error && questions && questions.length > 0) {
     // Persist the dynamic test so we have a real ID for the backend timer
@@ -313,7 +313,7 @@ export async function generateTopicTest(topic: string, questionCount = 10, supab
   console.warn('get_random_questions_v2 failed, using fallback:', error);
   const { data: fallbackQuestions, error: fallbackError } = await supabase
     .from('questions')
-    .select('id, topic, subtopic, difficulty, question, options, correct_answer, explanation')
+    .select('id, topic, subtopic, difficulty, question, options, correct_answer, explanation, created_at')
     .eq('topic', topic)
     .limit(questionCount);
 
@@ -341,7 +341,7 @@ export async function generateMockTest(questionCount = 50, supabaseClient?: any)
   const { data: questions, error } = await client.rpc('get_random_questions_v2', {
     p_topic: null,
     p_limit: questionCount,
-  }).select('id, topic, subtopic, difficulty, question, options, correct_answer, explanation') as { data: Question[] | null, error: any };
+  }).select('id, topic, subtopic, difficulty, question, options, correct_answer, explanation, created_at') as { data: Question[] | null, error: any };
 
     // Balanced distribution: fetch some questions from every topic
     const { data: topicsData } = await client.rpc('get_topic_stats');
@@ -394,7 +394,7 @@ export async function generateMockTest(questionCount = 50, supabaseClient?: any)
   console.warn('get_random_questions_v2 failed for mock, using fallback:', error);
   const { data: fallbackQuestions, error: fallbackError } = await supabase
     .from('questions')
-    .select('id, topic, subtopic, difficulty, question, options, correct_answer, explanation')
+    .select('id, topic, subtopic, difficulty, question, options, correct_answer, explanation, created_at')
     .limit(questionCount);
 
   if (fallbackError || !fallbackQuestions || fallbackQuestions.length === 0) {
