@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
+import { useQuery } from '@tanstack/react-query';
+import { getProfile } from '@/lib/api';
 import {
   LayoutDashboard,
   BookOpen,
@@ -28,7 +30,16 @@ export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: () => getProfile(user!.id),
+    enabled: !!user,
+  });
+
   if (!user) return null;
+
+  const displayName = profile?.name || user.email?.split('@')[0];
+  const initials = displayName?.charAt(0).toUpperCase() || '?';
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300" style={{
@@ -71,15 +82,21 @@ export default function Navbar() {
 
           {/* User section (Desktop) */}
           <div className="hidden lg:flex items-center gap-4">
-            <Link href="/profile" className="flex flex-col items-end hover:text-indigo-600 transition-colors">
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Active User</span>
-              <span className="text-sm text-slate-700 font-bold truncate max-w-[150px]">
-                {user.email?.split('@')[0]}
-              </span>
+            <Link href="/profile" className="flex items-center gap-3 group px-3 py-1.5 rounded-2xl hover:bg-slate-50 transition-all border border-transparent hover:border-slate-100">
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Active User</span>
+                <span className="text-sm text-slate-700 font-black truncate max-w-[120px]">
+                  {displayName}
+                </span>
+              </div>
+              <div className="w-10 h-10 rounded-full gradient-accent flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:scale-105 transition-transform">
+                {initials}
+              </div>
             </Link>
+            <div className="h-8 w-[1px] bg-slate-200 mx-1" />
             <button
               onClick={signOut}
-              className="flex items-center justify-center w-11 h-11 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all border border-slate-100 shadow-sm"
+              className="flex items-center justify-center w-10 h-10 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
               title="Sign Out"
             >
               <LogOut size={20} />
@@ -102,10 +119,16 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="lg:hidden border-t border-slate-100 bg-white/95 backdrop-blur-2xl animate-fadeIn overflow-hidden shadow-2xl">
           <div className="px-4 py-8 space-y-3">
-            <div className="px-5 py-4 mb-6 rounded-2xl bg-slate-50 border border-slate-100 shadow-inner">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Authenticated Account</p>
-              <p className="text-sm font-black text-slate-800 truncate">{user.email}</p>
-            </div>
+            <Link href="/profile" onClick={() => setMobileOpen(false)} className="flex items-center gap-4 p-4 mb-6 rounded-2xl bg-slate-50 border border-slate-100 shadow-sm group">
+              <div className="w-12 h-12 rounded-full gradient-accent flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Authenticated Account</p>
+                <p className="text-base font-black text-slate-800 truncate">{displayName}</p>
+                <p className="text-xs text-slate-500 truncate">{user.email}</p>
+              </div>
+            </Link>
             <Link
               href="/profile"
               onClick={() => setMobileOpen(false)}
