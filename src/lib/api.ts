@@ -17,6 +17,21 @@ export async function getProfile(userId: string, supabaseClient?: any): Promise<
   return data;
 }
 
+export async function updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating profile:', error);
+    throw error;
+  }
+  return data;
+}
+
 // ============================================
 // Topics API
 // ============================================

@@ -12,6 +12,7 @@ import {
   X,
   GraduationCap,
   FileText,
+  User,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -70,12 +71,12 @@ export default function Navbar() {
 
           {/* User section (Desktop) */}
           <div className="hidden lg:flex items-center gap-4">
-            <div className="flex flex-col items-end">
+            <Link href="/profile" className="flex flex-col items-end hover:text-indigo-600 transition-colors">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Active User</span>
               <span className="text-sm text-slate-700 font-bold truncate max-w-[150px]">
                 {user.email?.split('@')[0]}
               </span>
-            </div>
+            </Link>
             <button
               onClick={signOut}
               className="flex items-center justify-center w-11 h-11 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all border border-slate-100 shadow-sm"
@@ -105,6 +106,17 @@ export default function Navbar() {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Authenticated Account</p>
               <p className="text-sm font-black text-slate-800 truncate">{user.email}</p>
             </div>
+            <Link
+              href="/profile"
+              onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-4 px-6 py-4.5 rounded-2xl text-base font-bold transition-all ${pathname === '/profile'
+                  ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-500/30'
+                  : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50 border border-transparent'
+                }`}
+            >
+              <User size={22} />
+              My Profile
+            </Link>
             {navItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               const Icon = item.icon;
