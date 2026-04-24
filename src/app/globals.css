@@ -178,25 +178,78 @@ body {
 /* Input styles */
 .input-field {
   width: 100%;
-  padding: 1rem 1.25rem;
+  padding: 0.875rem 1.25rem;
   background: white;
-  border: 1px solid var(--border-color);
+  border: 1.5px solid var(--border-color);
   border-radius: 14px;
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-family: 'Inter', sans-serif;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .input-field:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.08);
+  background: white;
 }
 
 .input-field::placeholder {
   color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Input groups with icons */
+.input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-group .input-icon-left {
+  position: absolute;
+  left: 1rem;
+  color: var(--text-muted);
+  transition: all 0.25s ease;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-group .input-icon-right {
+  position: absolute;
+  right: 1rem;
+  color: var(--text-muted);
+  transition: all 0.25s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.input-group .input-icon-right:hover {
+  color: var(--accent-primary);
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.input-group:focus-within .input-icon-left {
+  color: var(--accent-primary);
+  transform: scale(1.1);
+}
+
+.input-group .input-field-with-icon {
+  padding-left: 3rem;
+}
+
+.input-group .input-field-with-right-icon {
+  padding-right: 3rem;
 }
 
 /* Quiz option button */

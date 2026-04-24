@@ -18,6 +18,10 @@ import {
   Flag,
   Send,
   Grid3X3,
+  Maximize,
+  Minimize,
+  X,
+  AlertTriangle,
 } from 'lucide-react';
 import type { Question, Test, Attempt } from '@/lib/types';
 
@@ -39,6 +43,8 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [showGrid, setShowGrid] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -54,8 +60,10 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
     mutationFn: (data: { score: number, accuracy: number, timeTaken: number }) =>
       submitAttempt(attempt!.id, userId, data.score, data.accuracy, data.timeTaken),
     onSuccess: () => {
+      if (attempt) localStorage.removeItem(`quiz_progress_${attempt.id}`);
       queryClient.invalidateQueries({ queryKey: ['recentAttempts', userId] });
       queryClient.invalidateQueries({ queryKey: ['profile', userId] });
+      toast.success('Test submitted successfully!');
       router.push(`/result/${attempt!.id}`);
     },
     onError: () => {
@@ -112,6 +120,84 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isReady, initialTest.time_limit_seconds]);
+
+  // 3. Navigation & Fullscreen Trapping
+  useEffect(() => {
+    if (!isReady) return;
+
+    // Prevent Browser Back Button
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = (e: PopStateEvent) => {
+      window.history.pushState(null, '', window.location.href);
+      setShowExitConfirm(true);
+    };
+
+    // Prevent Refresh/Tab Close
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    // Fullscreen Change Listener
+    const handleFullscreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [isReady]);
+
+  // 4. Persistence (LocalStorage)
+  useEffect(() => {
+    if (!isReady || !attempt) return;
+    
+    const key = `quiz_progress_${attempt.id}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        const { savedAnswers, savedIndex } = JSON.parse(saved);
+        setAnswers(prev => ({ ...prev, ...savedAnswers }));
+        setCurrentIndex(savedIndex);
+      } catch (err) {
+        console.error('Failed to load saved progress', err);
+      }
+    }
+  }, [isReady, attempt]);
+
+  useEffect(() => {
+    if (isReady && attempt) {
+      localStorage.setItem(`quiz_progress_${attempt.id}`, JSON.stringify({
+        savedAnswers: answers,
+        savedIndex: currentIndex
+      }));
+    }
+  }, [answers, currentIndex, isReady, attempt]);
+
+  const toggleFullScreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (err) {
+      console.error('Fullscreen toggle failed', err);
+    }
+  };
+
+  const handleExitTest = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    router.push('/dashboard');
+  };
 
   const handleSubmit = useCallback(async () => {
     if (submitMutation.isPending) return;
@@ -182,7 +268,21 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
               className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 transition-all active:scale-95 shadow-sm"
               title="Question Grid"
             >
-              <Grid3X3 size={22} />
+              <Grid3X3 size={20} />
+            </button>
+            <button 
+              onClick={toggleFullScreen} 
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 transition-all active:scale-95 shadow-sm"
+              title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            >
+              {isFullScreen ? <Minimize size={20} /> : <Maximize size={20} />}
+            </button>
+            <button 
+              onClick={() => setShowExitConfirm(true)} 
+              className="p-2.5 rounded-xl bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 transition-all active:scale-95 shadow-sm"
+              title="Exit Test"
+            >
+              <X size={20} />
             </button>
             <div className="min-w-0">
               <h2 className="font-black text-sm sm:text-base truncate max-w-[120px] sm:max-w-[250px] text-slate-900 tracking-tight">{initialTest.title}</h2>
@@ -342,6 +442,34 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
                 disabled={submitMutation.isPending}
               >
                 {submitMutation.isPending ? 'Submitting...' : 'Confirm Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="glass-card p-8 max-w-md w-full border-red-500/20">
+            <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+              <AlertTriangle size={32} className="text-red-400" />
+            </div>
+            <h3 className="text-2xl font-black mb-2 text-center text-red-400">Exit Test?</h3>
+            <p className="text-slate-400 mb-8 text-center leading-relaxed">
+              Are you sure you want to leave? Your current progress is saved, but the timer will continue to run on the server.
+            </p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setShowExitConfirm(false)} 
+                className="btn-secondary flex-1 py-3"
+              >
+                Stay in Test
+              </button>
+              <button 
+                onClick={handleExitTest} 
+                className="btn-danger flex-1 py-3"
+              >
+                Confirm Exit
               </button>
             </div>
           </div>

@@ -99,47 +99,60 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
-              <div className="animate-fadeIn">
-                <label className="block text-sm text-slate-400 mb-1.5">Full Name</label>
-                <div className="relative">
-                  <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <div className="animate-fadeIn space-y-1.5">
+                <label className="block text-sm font-medium text-slate-400 ml-1">Full Name</label>
+                <div className="input-group">
+                  <div className="input-icon-left">
+                    <User size={18} />
+                  </div>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="input-field pl-10"
+                    className="input-field input-field-with-icon"
                     placeholder="Enter your name"
                   />
                 </div>
               </div>
             )}
 
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Email</label>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-400 ml-1">Email Address</label>
+              <div className="input-group">
+                <div className="input-icon-left">
+                  <Mail size={18} />
+                </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="input-field pl-10"
-                  placeholder="you@example.com"
+                  className="input-field input-field-with-icon"
+                  placeholder="name@example.com"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm text-slate-400 mb-1.5">Password</label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center ml-1">
+                <label className="block text-sm font-medium text-slate-400">Password</label>
+                {isLogin && (
+                  <Link href="#" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                    Forgot Password?
+                  </Link>
+                )}
+              </div>
+              <div className="input-group">
+                <div className="input-icon-left">
+                  <Lock size={18} />
+                </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="input-field pl-10 pr-10"
+                  className="input-field input-field-with-icon input-field-with-right-icon"
                   placeholder="••••••••"
                   required
                   minLength={6}
@@ -147,9 +160,10 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  className="input-icon-right"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>

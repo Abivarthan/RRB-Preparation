@@ -187,8 +187,14 @@ export async function submitAttempt(
   });
 
   if (error) {
-    console.error('Error submitting attempt:', error);
+    console.error('Supabase RPC Error:', error);
     throw error;
+  }
+
+  // Check for logical error returned in JSON
+  if (data && typeof data === 'object' && 'error' in data) {
+    console.error('Logic Error in RPC:', data.error);
+    throw new Error(data.error as string);
   }
 }
 
