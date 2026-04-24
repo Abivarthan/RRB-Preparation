@@ -1,137 +1,115 @@
 # Complete Guide
 
-Welcome to the **RRB Exam Preparation Platform** technical guide. This document is designed for developers and product engineers to understand the system architecture, core logic, and design principles of the application.
+Welcome to the **RRB Exam Preparation Platform** technical guide. This document is the definitive reference for developers and product engineers, covering the entire lifecycle from question ingestion to high-concurrency exam delivery.
 
 ---
 
-## 🏗️ 1. Project Overview
-A high-performance exam simulation platform built for railway aspirants. It handles a massive database of **90,000+ questions** with sub-second retrieval times and provides a secure, distraction-free environment for mock exams.
+## 🏗️ 1. System Architecture
 
-### Key Features
-- **Intelligent Test Generation**: Mixed mock tests and focused topic drills.
-- **Proctor-Ready Engine**: Fullscreen enforcement and navigation trapping.
-- **Atomic Stats**: Real-time updates to user profiles using database-level transactions.
-- **Persistence**: Auto-save progress to survive browser crashes or accidental refreshes.
+The platform is built on an **Atomic-Transactional** architecture. By pushing critical logic to the database layer (Supabase/Postgres), we ensure data integrity and sub-second performance even with massive datasets.
 
----
-
-## 🛠️ 2. Tech Stack
-- **Framework**: Next.js 16 (App Router)
-- **Database**: PostgreSQL (via Supabase)
-- **State Management**: TanStack Query v5 (React Query)
-- **Styling**: Tailwind CSS 4.0
-- **Auth**: Supabase Auth (with SSR support)
-
----
-
-## 🧠 3. Test Generation Logic
-
-The system distinguishes between **fixed** and **dynamic** tests to ensure a variety of learning paths.
-
-### A. Topic-Wise Tests (Focused Practice)
-- **Logic**: When a user selects a topic, the system checks for existing tests or generates a new one.
-- **Persistence**: Once generated, the relationship between the test and its questions is stored in `test_questions`. This ensures the same test ID always returns the same questions.
-
-### B. Mock Exams (Balanced Distribution)
-- **Algorithm**: Instead of purely random selection, the system:
-  1. Fetches all available topics via `get_topic_stats`.
-  2. Calculates `questions_per_topic` based on the target total.
-  3. Iterates through topics to pick a balanced set, ensuring the exam covers the entire syllabus.
-  4. Shuffles the final set to mimic real exam conditions.
-
-### C. Efficient Random Retrieval (`random_id`)
-To avoid the performance trap of `ORDER BY random()`, we use a custom `random_id` float column.
-- **How it works**: Questions are fetched where `random_id >= random()`. If not enough questions are found, it wraps around to `random_id < random()`.
-- **Result**: Question selection remains O(1) even with 100,000+ records.
-
----
-
-## 🔄 4. The Submission Lifecycle
-
-The most critical flow in the application is the transition from "Answering" to "Completed".
-
-### Step-by-Step Data Flow
-1.  **Start**: User enters `/test/[id]`. A record is inserted into `attempts` (if not already existing).
-2.  **In-Progress**: Every time a user selects an option, `saveAnswer` is called. This records the choice in `attempt_answers` instantly.
-3.  **Submission**: User clicks "Confirm Submit".
-4.  **Atomic RPC Call**: The frontend calls the `submit_test_attempt` PostgreSQL function.
-    - **Step A**: Checks if the attempt is already submitted (prevents duplicates).
-    - **Step B**: Marks `is_submitted = true` and records `completed_at`.
-    - **Step C**: Updates `profiles` (increments `total_score` and `tests_attempted`).
-    - **Step D**: Calculates and updates `streak_count` based on IST date logic.
-5.  **Finalization**: The frontend invalidates the `profile` cache and redirects to `/result/[id]`.
-
----
-
-## 🔥 5. Streak & Stats Logic
-
-The streak system is designed to encourage daily consistency without punishing users for multiple tests in one day.
-
-- **IST Synchronization**: All time calculations use `Asia/Kolkata` timezone to match the RRB exam schedule.
-- **Increment Rules**:
-  - **Same Day**: If `last_active_date` is today, stats update but streak stays same.
-  - **Next Day**: If `last_active_date` is yesterday, streak increments (+1).
-  - **Gap**: If `last_active_date` is older than 24 hours, streak resets to 1.
-
----
-
-## 🛡️ 6. Security & Stability
-
-### Middleware & Proxy
-The project utilizes `src/proxy.ts` (the Next 16 middleware convention) to:
-- Intercept requests to protected routes (`/dashboard`, `/test`).
-- Validate the user session via Supabase SSR.
-- Redirect unauthorized users to `/login`.
-
-### Row Level Security (RLS)
-Database policies ensure that users can only view their own `attempts` and `profiles`. Public data like `questions` is restricted to authenticated roles only.
-
----
-
-## 👨‍💻 7. Developer's Guide
-
-### Adding New Questions
-Questions can be added via the Supabase Dashboard or by running the bulk-import script:
-```bash
-npx ts-node supabase/bulk-import.ts
+```mermaid
+graph TD
+    User((User)) --> NextJS[Next.js 16 App Router]
+    NextJS --> Auth[Supabase Auth / SSR]
+    NextJS --> API[lib/api.ts]
+    API --> RPC[Postgres RPC Functions]
+    API --> DB[(Supabase DB)]
+    
+    subgraph Data Flow
+        Start[Start Test] --> Fetch[Fetch Questions]
+        Fetch --> State[Manage Local State]
+        State --> Submit[Atomic Submission RPC]
+        Submit --> Stats[Instant Profile Update]
+    end
 ```
 
-### Modifying Scoring Logic
-To change how scores are calculated (e.g., adding negative marking), modify the `submit_test_attempt` function in `supabase/fix_stats_rpc.sql` and the calculation in `src/app/test/[id]/QuizEngine.tsx`.
-
-### Creating New Tests
-Topic tests are generated dynamically in `src/lib/api.ts` using the `generateTopicTest` function. You can adjust the `questionCount` parameter there.
-
 ---
 
-## 🆘 8. Troubleshooting (Common Issues)
+## 🧠 2. Test Logic & Generation
 
-| Issue | Cause | Fix |
+The platform distinguishes between two primary testing modes, optimized for different learning objectives.
+
+### A. Fixed Topic Tests vs. Dynamic Mock Exams
+| Feature | Topic-Wise Practice | Full Mock Exams |
 | :--- | :--- | :--- |
-| **Submission Failed** | RPC not found or Attempt ID mismatch | Ensure `fix_stats_rpc.sql` is run in Supabase SQL editor. |
-| **Failed to Fetch** | Incorrect Supabase URL/Key | Check `.env.local` for missing `NEXT_PUBLIC_` prefix. |
-| **EPERM: Permission Denied** | File lock on Windows | Close the dev server (`Ctrl+C`) before running `npm run build`. |
-| **Hydration Mismatch** | Server/Client date difference | Ensure all date components use `useEffect` to render on client only. |
+| **Logic** | Static Question Set | Weighted Random Set |
+| **Persistence** | Links saved in `test_questions` | Dynamic generation on-the-fly |
+| **Goal** | Mastery of a single subject | Comprehensive exam simulation |
+| **Topic Mix** | Single Topic | Balanced across all topics |
+
+### B. Guaranteeing Uniqueness & Scaling
+- **O(1) Random Selection**: We use a `random_id` float column. Instead of the slow `ORDER BY random()`, we fetch where `random_id >= random()`. This allows us to select 50 questions from a 100k+ dataset in under 50ms.
+- **Deduplication**: For fixed tests, question IDs are mapped to the test ID. For dynamic tests, the system uses the `get_random_questions_v2` RPC which can be extended to exclude previously answered questions using a `NOT IN (SELECT question_id FROM attempt_answers)` filter.
 
 ---
 
-## 🚀 9. Setup & Deployment
+## 🔄 3. Data Flow (The User Lifecycle)
 
-### 1. Local Setup
-```bash
-npm install
-npm run dev
-```
-
-### 2. Environment Configuration
-Ensure `.env.local` contains:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-### 3. Production Deployment
-- Connect your repo to **Vercel**.
-- Add the Environment Variables in the Vercel Dashboard.
-- Ensure your Supabase Database has all migrations from the `/supabase` folder applied.
+1.  **Authentication**: User logs in via Supabase Auth; the `proxy.ts` (middleware) validates the session.
+2.  **Dashboard**: React Query fetches `profile` and `recentAttempts` in parallel.
+3.  **Start Test**: `startAttempt` inserts a row. If a user refreshes, the system retrieves the existing "in-progress" attempt.
+4.  **Answering**: Each choice is saved to `attempt_answers` via `saveAnswer`. This ensures progress is never lost.
+5.  **Submission**: Triggered by user or timer. The `submit_test_attempt` RPC runs.
+6.  **Results**: User is redirected to `/result/[id]`, which provides a per-question breakdown.
+7.  **Leaderboard**: The profile stats updated in Step 5 are immediately reflected globally.
 
 ---
-*Maintained by the RRB Product Engineering Team.*
+
+## ⚡ 4. Atomic Submission System
+
+### Why Atomic RPC?
+Instead of making multiple calls from the frontend (which risk "partial success" on poor networks), we use a single **PostgreSQL Function**. 
+
+**In one transaction:**
+1.  **Mark Submission**: Set `is_submitted = true` (Prevents double-scoring).
+2.  **Score Calculation**: The server calculates accuracy and records `time_taken`.
+3.  **Profile Stats**: Atomically increments `total_score` and `tests_attempted`.
+4.  **Streak Logic**: Decides whether to increment, hold, or reset the user's daily streak based on the last active date (IST).
+
+### Failure Handling
+- **Double Submission**: The RPC checks if `is_submitted` is already true. If so, it returns the current data without re-processing.
+- **Network Failure**: If the network fails before the RPC completes, the `is_submitted` flag remains false. The user can retry the submission upon reconnecting.
+
+---
+
+## 🏎️ 5. Performance Engineering
+
+- **No `ORDER BY random()`**: In SQL, `random()` forces a full table scan. Our `random_id` index strategy makes selection instant.
+- **Limited Fetching**: All question queries use strict `LIMIT` clauses to minimize payload size.
+- **Batching**: 90k+ question datasets are ingested using JSON streaming to avoid memory pressure on the server.
+
+---
+
+## ⚠️ 6. Edge Cases & Resilience
+
+| Scenario | System Behavior |
+| :--- | :--- |
+| **Browser Refresh** | `localStorage` + `attempts` table sync. Test resumes exactly where it was. |
+| **Timer Expires** | Frontend triggers `handleAutoSubmit()` immediately. RPC finalizes the test. |
+| **Tab Closed** | The timer continues on the server. The user can return and finish if time remains. |
+| **Duplicate Clicks** | RPC-level locking ensures stats are only updated once per attempt ID. |
+
+---
+
+## 🛠️ 7. Developer & Debugging Guide
+
+### Key Functions
+- `generateTopicTest(topic)`: Creates/links questions for focused practice.
+- `generateMockTest()`: Algorithmically picks a balanced set from all topics.
+- `submit_test_attempt()`: The atomic backend core.
+
+### Debugging Steps
+1.  **Supabase Logs**: Check the "Database" -> "Query Performance" tab in Supabase to find slow RPCs.
+2.  **RPC Errors**: If a submission fails, the frontend logs the specific Postgres error code. Search the [PostgreSQL Error Codes](https://www.postgresql.org/docs/current/errcodes-appendix.html) list.
+3.  **Auth Issues**: Use the "Auth" -> "Users" tab to verify if the user exists and has a matching entry in the `profiles` table.
+
+---
+
+## 🚀 8. Setup & Scaling
+1.  **Local**: `npm install` -> `npm run dev`.
+2.  **Data**: Run `supabase/bulk-import.ts` to populate questions.
+3.  **Scale**: As the user base grows, implement **Read Replicas** for question fetching while keeping `attempts` on the primary instance.
+
+---
+*Maintained by the RRB Technical Architecture Team.*
