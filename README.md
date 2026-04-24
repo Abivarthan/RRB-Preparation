@@ -77,7 +77,31 @@ We use a **PostgreSQL RPC** (`submit_test_attempt`) to ensure data integrity. In
 
 ---
 
-## 🧩 4. Project Structure
+## 📊 4. Database Schema & Data Flow
+
+The system is optimized to handle over **90,000+ questions** with high performance.
+
+### Key Tables
+- `profiles`: Stores user stats, streaks, and engagement metadata.
+- `questions`: Optimized with `random_id` and `topic` indexes for fast random retrieval.
+- `tests`: Definitions for topic-wise and full-length mock exams.
+- `attempts`: Records every test session, including timing and final scores.
+- `attempt_answers`: Detailed logs of every answer choice for post-exam review.
+
+### Data Ingestion
+Bulk data is handled via streaming scripts in `supabase/` (e.g., `bulk-import.ts`), which utilize batching and upserts to ensure memory-efficient processing of massive JSON datasets.
+
+---
+
+## 🔒 5. Security & Authentication
+
+- **Middleware (Proxy)**: All protected routes are guarded by the `src/proxy.ts` layer, which validates Supabase sessions and handles auto-redirects for unauthorized users.
+- **RLS (Row Level Security)**: Database-level policies ensure users can only access their own profile and attempt history.
+- **Environment Safety**: Descriptive runtime errors are thrown if critical Supabase keys are missing, preventing silent "Failed to fetch" errors.
+
+---
+
+## 🧩 6. Project Structure
 
 ```bash
 src/
@@ -97,10 +121,11 @@ src/
 
 ---
 
-## 🚀 5. Roadmap for Improvements
+## 🚀 7. Roadmap for Improvements
 
 ### UI/UX Enhancements
 - [ ] **Testimonial Slider**: Add a section on the landing page for successful candidates.
+- [ ] **Interactive Onboarding**: A step-by-step tour for new users.
 - [ ] **Animated Progress**: Use Framer Motion for more fluid transitions between questions.
 - [ ] **Dark Mode Toggle**: Allow users to switch between "Midnight Blue" and "Pure Dark".
 
@@ -108,6 +133,7 @@ src/
 - [ ] **AI-Powered Recommendations**: Suggest topics based on accuracy trends.
 - [ ] **Social Leaderboards**: Allow users to create private groups to study with friends.
 - [ ] **Offline Mode**: Cache questions via Service Workers for low-connectivity areas.
+- [ ] **Advanced Analytics**: Heatmaps showing time spent per question type.
 
 ---
 
