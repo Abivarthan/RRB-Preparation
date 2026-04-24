@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getLeaderboard } from '@/lib/api';
 import { useAuth } from '@/providers/AuthProvider';
@@ -16,6 +17,12 @@ import {
 } from 'lucide-react';
 
 export default function LeaderboardPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { user } = useAuth();
 
   const { data: leaderboard, isLoading } = useQuery({
@@ -23,7 +30,7 @@ export default function LeaderboardPage() {
     queryFn: () => getLeaderboard(50),
   });
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <>
         <Navbar />
@@ -58,44 +65,45 @@ export default function LeaderboardPage() {
           <p className="text-slate-500 text-base sm:text-lg font-medium">Recognizing the elite performers in the RRB community.</p>
         </div>
 
-        {/* Top 3 Podium */}
-        {leaderboard && leaderboard.length >= 3 && (
-          <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-12 animate-fadeIn items-end px-1 sm:px-0">
             {/* 2nd place */}
-            <div className="glass-card p-4 sm:p-7 text-center relative overflow-hidden group hover:scale-105 transition-all bg-white border-slate-200">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 border-4 border-white shadow-lg">
-                <User size={24} className="text-slate-400" />
+            {leaderboard?.[1] && (
+              <div className="glass-card p-4 sm:p-7 text-center relative overflow-hidden group hover:scale-105 transition-all bg-white border-slate-200">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 border-4 border-white shadow-lg">
+                  <User size={24} className="text-slate-400" />
+                </div>
+                <Medal size={20} className="rank-silver mx-auto mb-2 drop-shadow-md" />
+                <h3 className="font-black text-[10px] sm:text-sm truncate text-slate-800 uppercase tracking-wider">{leaderboard?.[1].name}</h3>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{leaderboard?.[1].total_score}</p>
+                <p className="text-[9px] sm:text-xs text-slate-400 font-bold uppercase mt-1">{leaderboard?.[1].tests_attempted} tests</p>
               </div>
-              <Medal size={20} className="rank-silver mx-auto mb-2 drop-shadow-md" />
-              <h3 className="font-black text-[10px] sm:text-sm truncate text-slate-800 uppercase tracking-wider">{leaderboard[1].name}</h3>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{leaderboard[1].total_score}</p>
-              <p className="text-[9px] sm:text-xs text-slate-400 font-bold uppercase mt-1">{leaderboard[1].tests_attempted} tests</p>
-            </div>
+            )}
 
             {/* 1st place */}
-            <div className="glass-card p-6 sm:p-10 text-center border-amber-300 relative overflow-hidden group hover:scale-110 transition-all bg-amber-50 shadow-2xl shadow-amber-500/10 z-10">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-400" />
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white flex items-center justify-center mx-auto mb-4 border-4 border-amber-200 shadow-xl">
-                <User size={32} className="text-amber-500" />
+            {leaderboard?.[0] && (
+              <div className="glass-card p-6 sm:p-10 text-center border-amber-300 relative overflow-hidden group hover:scale-110 transition-all bg-amber-50 shadow-2xl shadow-amber-500/10 z-10">
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-400" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white flex items-center justify-center mx-auto mb-4 border-4 border-amber-200 shadow-xl">
+                  <User size={32} className="text-amber-500" />
+                </div>
+                <Crown size={28} className="rank-gold mx-auto mb-2 drop-shadow-md" />
+                <h3 className="font-black text-xs sm:text-lg truncate text-slate-900 uppercase tracking-widest">{leaderboard?.[0].name}</h3>
+                <p className="text-2xl sm:text-4xl font-black text-amber-600 mt-1">{leaderboard?.[0].total_score}</p>
+                <p className="text-xs sm:text-sm text-amber-700/60 font-black uppercase tracking-widest mt-1">{leaderboard?.[0].tests_attempted} tests</p>
               </div>
-              <Crown size={28} className="rank-gold mx-auto mb-2 drop-shadow-md" />
-              <h3 className="font-black text-xs sm:text-lg truncate text-slate-900 uppercase tracking-widest">{leaderboard[0].name}</h3>
-              <p className="text-2xl sm:text-4xl font-black text-amber-600 mt-1">{leaderboard[0].total_score}</p>
-              <p className="text-xs sm:text-sm text-amber-700/60 font-black uppercase tracking-widest mt-1">{leaderboard[0].tests_attempted} tests</p>
-            </div>
+            )}
 
             {/* 3rd place */}
-            <div className="glass-card p-4 sm:p-7 text-center relative overflow-hidden group hover:scale-105 transition-all bg-white border-slate-200">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3 border-4 border-white shadow-lg">
-                <User size={24} className="text-orange-400" />
+            {leaderboard?.[2] && (
+              <div className="glass-card p-4 sm:p-7 text-center relative overflow-hidden group hover:scale-105 transition-all bg-white border-slate-200">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-3 border-4 border-white shadow-lg">
+                  <User size={24} className="text-orange-400" />
+                </div>
+                <Medal size={20} className="rank-bronze mx-auto mb-2 drop-shadow-md" />
+                <h3 className="font-black text-[10px] sm:text-sm truncate text-slate-800 uppercase tracking-wider">{leaderboard?.[2].name}</h3>
+                <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{leaderboard?.[2].total_score}</p>
+                <p className="text-[9px] sm:text-xs text-slate-400 font-bold uppercase mt-1">{leaderboard?.[2].tests_attempted} tests</p>
               </div>
-              <Medal size={20} className="rank-bronze mx-auto mb-2 drop-shadow-md" />
-              <h3 className="font-black text-[10px] sm:text-sm truncate text-slate-800 uppercase tracking-wider">{leaderboard[2].name}</h3>
-              <p className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{leaderboard[2].total_score}</p>
-              <p className="text-[9px] sm:text-xs text-slate-400 font-bold uppercase mt-1">{leaderboard[2].tests_attempted} tests</p>
-            </div>
-          </div>
-        )}
+            )}
 
         {/* Full List */}
         <div className="space-y-3 stagger-children">

@@ -88,21 +88,103 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Stats */}
-        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          {[
-            { value: '50+', label: 'Questions' },
-            { value: '3', label: 'Topics' },
-            { value: '60m', label: 'Mock Timer' },
-            { value: '∞', label: 'Practice' },
-          ].map((stat, i) => (
-            <div key={i} className="glass-card p-6">
-              <div className="text-3xl font-black bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-1">
-                {stat.value}
+        {/* Testimonials */}
+        <div className="mt-32">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">Trusted by Aspirants</h2>
+            <p className="text-slate-400 max-w-xl mx-auto">See what candidates are saying about their experience with RRB Prep.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Rahul Sharma",
+                role: "RRB NTPC Aspirant",
+                quote: "The mock tests are incredibly realistic. The persistent timer helped me manage my time better during the actual exam.",
+                avatar: "RS"
+              },
+              {
+                name: "Priya Patel",
+                role: "Group D Candidate",
+                quote: "I love the topic-wise quizzes. They allowed me to focus on my weak areas in Arithmetic and Reasoning effectively.",
+                avatar: "PP"
+              },
+              {
+                name: "Amit Kumar",
+                role: "ALP Applicant",
+                quote: "The real-time leaderboard kept me motivated. Seeing my rank improve every week gave me the confidence I needed.",
+                avatar: "AK"
+              }
+            ].map((t, i) => (
+              <div key={i} className="glass-card p-8 relative hover:border-indigo-500/50 transition-colors">
+                <div className="text-indigo-400 mb-6 font-serif text-5xl opacity-20 absolute top-4 left-4">"</div>
+                <p className="text-slate-300 italic mb-8 relative z-10 leading-relaxed">{t.quote}</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-indigo-600/20 flex items-center justify-center font-bold text-indigo-400 border border-indigo-500/20">
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-200">{t.name}</h4>
+                    <p className="text-xs text-slate-500 uppercase tracking-widest">{t.role}</p>
+                  </div>
+                </div>
               </div>
-              <div className="text-sm text-slate-400">{stat.label}</div>
+            ))}
+          </div>
+        </div>
+
+        {/* Why Choose Us */}
+        <div className="mt-32 glass-card p-8 sm:p-16 border-indigo-500/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 rounded-full blur-3xl -mr-32 -mt-32" />
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-black mb-6 tracking-tight">Your Success is Our <span className="text-indigo-400">Mission</span></h2>
+              <p className="text-slate-400 text-lg mb-8 leading-relaxed">
+                We've built a platform that removes the guesswork from preparation. With our atomic submission system and detailed analytics, you'll always know where you stand.
+              </p>
+              <ul className="space-y-4">
+                {[
+                  "90,000+ Question Bank",
+                  "Real-time Accuracy Tracking",
+                  "Daily Streak & Motivation",
+                  "Mobile-First Experience"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 text-slate-200 font-bold">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <ArrowRight size={14} className="text-emerald-500" />
+                    </div>
+                    {item}
+                  </li>
+                ))}
+              </ul>
             </div>
-          ))}
+            <div className="grid grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="glass-card p-6 bg-indigo-500/5 border-indigo-500/10">
+                  <BarChart3 className="text-indigo-400 mb-3" size={32} />
+                  <h4 className="font-bold mb-1">Analytics</h4>
+                  <p className="text-xs text-slate-500">Deep performance insights</p>
+                </div>
+                <div className="glass-card p-6 bg-purple-500/5 border-purple-500/10">
+                  <Target className="text-purple-400 mb-3" size={32} />
+                  <h4 className="font-bold mb-1">Precision</h4>
+                  <p className="text-xs text-slate-500">Exact exam simulation</p>
+                </div>
+              </div>
+              <div className="space-y-4 sm:space-y-6 mt-8">
+                <div className="glass-card p-6 bg-emerald-500/5 border-emerald-500/10">
+                  <Trophy className="text-emerald-400 mb-3" size={32} />
+                  <h4 className="font-bold mb-1">Ranking</h4>
+                  <p className="text-xs text-slate-500">Compete with the best</p>
+                </div>
+                <div className="glass-card p-6 bg-amber-500/5 border-amber-500/10">
+                  <Zap className="text-amber-400 mb-3" size={32} />
+                  <h4 className="font-bold mb-1">Speed</h4>
+                  <p className="text-xs text-slate-500">Fast-paced drill sessions</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
