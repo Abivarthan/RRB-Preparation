@@ -1,153 +1,154 @@
-# 🚂 RRB Exam Preparation Platform - Architecture & Design Guide
+# Complete Guide
 
-Welcome to the definitive guide for the RRB Exam Preparation project. This document outlines the technical architecture, design system, and core logic of the application to facilitate future improvements in UI/UX, logic, and expansion.
+Welcome to the official documentation for the **RRB Exam Preparation Platform**. This comprehensive guide provides a deep dive into the architecture, design, and implementation of a high-performance exam engine built for scalability and a premium user experience.
 
 ---
 
-## 🏗️ 1. System Architecture
+## 📖 Project Overview
+The RRB Exam Preparation Platform is a specialized web application designed to help railway aspirants master their exams. It features a massive dataset of ~90,000 questions, an immersive testing environment, and real-time performance tracking.
 
-The application is built on a modern, high-performance stack designed for scalability and real-time user feedback.
+## 🚀 Key Features
+- **Topic-Wise Tests**: Fixed-set practicing on specific subjects with non-repeating question logic.
+- **Full Mock Exams**: Dynamically generated 50-question papers with balanced topic distribution.
+- **Pro Quiz Engine**:
+  - Precision Timer (IST-synchronized).
+  - Navigation Control (Prevents accidental exit).
+  - Immersive Fullscreen Mode.
+  - Question Grid for quick review.
+- **Real-Time Analytics**: Instant updates to scores, accuracy, and daily streaks.
+- **Global Leaderboard**: Competitive ranking based on total performance.
+- **Responsive Mastery**: Fluid UI that feels native on both mobile and desktop.
 
-```mermaid
-graph TD
-    User((User)) --> NextJS[Next.js 16 App Router]
-    NextJS --> ClientComponents[Client Components - React Query]
-    NextJS --> ServerComponents[Server Components - Supabase SSR]
-    
-    subgraph Backend
-        Supabase[(Supabase)]
-        Auth[Auth Service]
-        Database[(PostgreSQL)]
-        RPC[Atomic RPC Functions]
-    end
-    
-    ClientComponents --> Auth
-    ClientComponents --> Database
-    ServerComponents --> Database
-    Database --- RPC
-```
+---
 
-### Core Technologies
-- **Frontend**: Next.js 16 (App Router), React 19
-- **Styling**: Tailwind CSS 4.0
-- **State Management**: TanStack Query (React Query) v5
-- **Backend-as-a-Service**: Supabase (Auth, PostgreSQL, Real-time)
+## 🛠️ Tech Stack
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router & Turbopack)
+- **Styling**: [Tailwind CSS 4.0](https://tailwindcss.com/)
+- **Backend/Database**: [Supabase](https://supabase.com/) (Auth, PostgreSQL, RPC, RLS)
+- **State Management**: [TanStack Query v5](https://tanstack.com/query/latest)
 - **Icons**: Lucide React
 - **Notifications**: React Hot Toast
 
 ---
 
-## 🎨 2. Design System (UI/UX)
-
-The project follows a **Premium Dark/Vibrant Aesthetic** designed to keep users engaged during long study sessions.
-
-### Visual Identity
-- **Primary Font**: [Inter](https://fonts.google.com/specimen/Inter) (Variable) - Selected for maximum readability.
-- **Color Palette**:
-  - `Indigo (#4f46e5)`: Primary action and brand color.
-  - `Slate (#0f172a)`: Background and primary text.
-  - `Emerald (#10b981)`: Success, Correct answers, and positive progress.
-  - `Red (#ef4444)`: Errors, Incorrect answers, and time-critical warnings.
-- **Glassmorphism**: Use of `backdrop-blur` and semi-transparent backgrounds for cards and overlays to create depth.
-
-### Component Design Rules
-- **Radius**: Large `20px` (or `rounded-3xl`) for cards, `14px` for inputs/buttons for a modern, friendly feel.
-- **Borders**: Subtle `1.5px` borders with low opacity to define space without clutter.
-- **Focus States**: Every interactive element must have a `focus-within` or `focus` state that uses a 4px soft ring (`ring-4 ring-indigo-500/10`).
+## 🏗️ System Architecture
+The application follows a **Decoupled-Atomic** architecture:
+1.  **Frontend**: Next.js Server Components handle initial data fetching for SEO and speed.
+2.  **Interaction Layer**: Client Components manage the complex quiz state using React Query for synchronization.
+3.  **Persistence Layer**: Supabase handles Auth and Database. 
+4.  **Logic Layer (RPC)**: Critical calculations (scoring, streaks, stat updates) are pushed to the database level via PL/pgSQL functions for atomicity and speed.
 
 ---
 
-## ⚙️ 3. Core Logic & Flows
+## 📊 Database Schema
+The schema is optimized for high-volume questions and concurrent test attempts.
 
-### A. The Quiz Engine
-Located in `src/app/test/[id]/QuizEngine.tsx`, this is the heart of the app.
+### Core Tables
+- **`profiles`**: User metadata, `total_score`, `tests_attempted`, and `streak_count`.
+- **`questions`**: 90k+ records. Includes `topic`, `difficulty`, and a `random_id` (float) for O(1) random selection.
+- **`tests`**: Definitions for both fixed and dynamic test types.
+- **`test_questions`**: Junction table for fixed-topic tests.
+- **`attempts`**: Records of started and completed test sessions.
+- **`attempt_answers`**: Logs of user choices vs correct answers.
 
-1.  **Persistence**: Automatically saves `answers` and `currentIndex` to `localStorage`.
-2.  **Security**: 
-    - **Navigation Trapping**: Prevents the browser back button from exiting the test.
-    - **Fullscreen API**: Forces focus by allowing users to enter immersive mode.
-3.  **Real-time Scoring**: Calculates score and accuracy locally but persists via an atomic database call.
-
-### B. Atomic Stats Update
-We use a **PostgreSQL RPC** (`submit_test_attempt`) to ensure data integrity. In a single call:
-- The attempt is marked as submitted.
-- The user's total score is incremented.
-- The test count is incremented.
-- **Streak Logic**: The system checks the `last_active_date` (in IST) to decide whether to increment, maintain, or reset the user's daily streak.
+### Security (RLS)
+Every table has **Row Level Security** enabled. Users can only read their own attempts and profiles, while questions and test definitions are globally readable for authenticated users.
 
 ---
 
-## 📊 4. Database Schema & Data Flow
+## 🧠 Test & Quiz Logic
 
-The system is optimized to handle over **90,000+ questions** with high performance.
+### 1. Question Retrieval
+- **Topic-Wise**: Fetches from the `test_questions` junction table to ensure a fixed, pre-defined experience.
+- **Mock Tests**: Uses the `get_random_questions_v2` RPC. It leverages the `random_id` index to pick a balanced distribution of questions across all topics in milliseconds, avoiding expensive `ORDER BY random()`.
 
-### Key Tables
-- `profiles`: Stores user stats, streaks, and engagement metadata.
-- `questions`: Optimized with `random_id` and `topic` indexes for fast random retrieval.
-- `tests`: Definitions for topic-wise and full-length mock exams.
-- `attempts`: Records every test session, including timing and final scores.
-- `attempt_answers`: Detailed logs of every answer choice for post-exam review.
-
-### Data Ingestion
-Bulk data is handled via streaming scripts in `supabase/` (e.g., `bulk-import.ts`), which utilize batching and upserts to ensure memory-efficient processing of massive JSON datasets.
+### 2. The Quiz Engine
+- **State Safety**: Answers and current index are synced to `localStorage`.
+- **Interruption Control**: Uses `popstate` and `beforeunload` listeners to trap navigation, ensuring users don't lose progress by accidentally hitting "Back".
 
 ---
 
-## 🔒 5. Security & Authentication
+## ⚡ Submission & Streak System
 
-- **Middleware (Proxy)**: All protected routes are guarded by the `src/proxy.ts` layer, which validates Supabase sessions and handles auto-redirects for unauthorized users.
-- **RLS (Row Level Security)**: Database-level policies ensure users can only access their own profile and attempt history.
-- **Environment Safety**: Descriptive runtime errors are thrown if critical Supabase keys are missing, preventing silent "Failed to fetch" errors.
+### Atomic Submission (RPC)
+When a user hits "Submit", a single call is made to the `submit_test_attempt` function:
+1.  **Validation**: Ensures the test hasn't been submitted already.
+2.  **Scoring**: Validates accuracy and time taken.
+3.  **Profile Update**: Atomically increments `total_score` and `tests_attempted`.
+4.  **Streak Calculation**:
+    - **Indian Standard Time (IST)**: All date logic is handled in `Asia/Kolkata` time.
+    - **Logic**:
+      - *Same Day*: Streak persists.
+      - *Consecutive Day*: Streak increments (+1).
+      - *Gap (>1 day)*: Streak resets to 1.
 
 ---
 
-## 🧩 6. Project Structure
+## 🏎️ Performance Optimization
+- **Dataset Handling**: Questions are indexed by `topic` and `random_id`.
+- **Batch Ingestion**: Bulk import scripts in `/supabase` use JSON streaming to handle 90k+ rows without memory overflows.
+- **Optimistic UI**: React Query `setQueryData` is used to update dashboard stats instantly upon test completion, before the background refetch finishes.
 
+---
+
+## 🎨 UI/UX Design System
+The "RRB Premium" theme is characterized by:
+- **Palette**: Deep Slates (`#0f172a`), Indigo Accents (`#4f46e5`), and Emerald Success states.
+- **Glassmorphism**: Backdrop blurs (`blur-xl`) on navbars and modals for depth.
+- **Typography**: Inter Variable for maximum legibility.
+- **Feedback**: Active states, hover-scales, and smooth `cubic-bezier` transitions for all interactive elements.
+
+---
+
+## 📂 Project Structure
 ```bash
 src/
-├── app/                  # Next.js App Router (Pages & API)
-│   ├── dashboard/        # Main user overview & stats
-│   ├── login/            # Polished Auth interface
-│   ├── test/[id]/        # The core Quiz Engine
-│   └── proxy.ts          # Global request handler (Next 16)
-├── components/           # Reusable UI components
-│   ├── Navbar.tsx        # Responsive navigation
-│   └── LoadingSpinner.tsx# Brand-consistent loader
-├── lib/
-│   ├── api.ts            # Centralized API service (Supabase calls)
-│   └── supabase/         # Client/Server/Middleware config
-└── providers/            # React Context (Auth, Query)
+├── app/                  # Pages & Route Handlers
+│   ├── (auth)/           # Authentication routes
+│   ├── dashboard/        # User analytics hub
+│   ├── test/[id]/        # Immersive quiz engine
+│   └── proxy.ts          # Next 16 Middleware/Proxy
+├── components/           # UI Atomic Design (Navbar, Spinner, etc.)
+├── lib/                  # Services & Shared Logic
+│   ├── api.ts            # Centralized API logic
+│   └── supabase/         # Client & Server initializers
+└── providers/            # Auth & Query Context providers
 ```
 
 ---
 
-## 🚀 7. Roadmap for Improvements
+## 🛠️ Getting Started
 
-### UI/UX Enhancements
-- [ ] **Testimonial Slider**: Add a section on the landing page for successful candidates.
-- [ ] **Interactive Onboarding**: A step-by-step tour for new users.
-- [ ] **Animated Progress**: Use Framer Motion for more fluid transitions between questions.
-- [ ] **Dark Mode Toggle**: Allow users to switch between "Midnight Blue" and "Pure Dark".
+### 1. Prerequisites
+- Node.js 20+
+- Supabase Account
 
-### Logic Expansion
-- [ ] **AI-Powered Recommendations**: Suggest topics based on accuracy trends.
-- [ ] **Social Leaderboards**: Allow users to create private groups to study with friends.
-- [ ] **Offline Mode**: Cache questions via Service Workers for low-connectivity areas.
-- [ ] **Advanced Analytics**: Heatmaps showing time spent per question type.
+### 2. Environment Variables
+Create a `.env.local` file:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
 
----
-
-## 🛠️ Development
-
-To start the project:
+### 3. Installation
 ```bash
+npm install
 npm run dev
 ```
 
-To build for production:
-```bash
-npm run build
-```
+---
+
+## 🚢 Deployment Guide
+1.  **Database**: Run the `schema.sql` and `fix_stats_rpc.sql` in your Supabase SQL Editor.
+2.  **Environment**: Add your Supabase keys to Vercel/Deployment provider.
+3.  **Build**: Run `npm run build` to ensure all TypeScript and Lint checks pass.
 
 ---
-*Created by Antigravity for RRB Prep Platform.*
+
+## 🆘 Common Issues & Fixes
+- **Failed to Fetch (Login)**: Ensure environment variables are not wrapped in quotes and have the correct `NEXT_PUBLIC_` prefix.
+- **EPERM (Build)**: Stop the development server before running `npm run build` on Windows systems.
+- **Middleware Deprecation**: The project has been migrated from `middleware.ts` to `proxy.ts` (Next 16 convention).
+
+---
+*Generated by Antigravity Technical Solutions.*
