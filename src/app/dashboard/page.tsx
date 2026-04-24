@@ -6,6 +6,7 @@ import { getProfile, getRecentAttempts } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Link from 'next/link';
+import Skeleton, { StatCardSkeleton, ListSkeleton } from '@/components/Skeleton';
 import {
   Flame,
   Trophy,
@@ -35,11 +36,11 @@ export default function DashboardPage() {
     enabled: !!user,
   });
 
-  if (authLoading || profileLoading) {
+  if (authLoading) {
     return (
       <>
         <Navbar />
-        <div className="pt-16"><LoadingSpinner message="Loading dashboard..." /></div>
+        <div className="pt-20"><LoadingSpinner message="Authenticating..." /></div>
       </>
     );
   }
@@ -90,22 +91,26 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 stagger-children">
-          {stats.map((stat, i) => (
-            <div key={i} className="stat-card group hover:shadow-xl transition-shadow border-slate-200">
-              <div className="flex items-center gap-4 mb-5">
-                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg shadow-black/10`}>
-                  <stat.icon size={22} className="text-white" />
+        {profileLoading ? (
+          <StatCardSkeleton />
+        ) : (
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 stagger-children">
+            {stats.map((stat, i) => (
+              <div key={i} className="stat-card group hover:shadow-xl transition-shadow border-slate-200">
+                <div className="flex items-center gap-4 mb-5">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg shadow-black/10`}>
+                    <stat.icon size={22} className="text-white" />
+                  </div>
+                  <span className="text-xs sm:text-sm text-slate-400 font-black uppercase tracking-widest">{stat.label}</span>
                 </div>
-                <span className="text-xs sm:text-sm text-slate-400 font-black uppercase tracking-widest">{stat.label}</span>
+                <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter">
+                  {stat.value}
+                  {stat.suffix && <span className="text-sm sm:text-base text-slate-400 font-bold ml-2 uppercase">{stat.suffix}</span>}
+                </div>
               </div>
-              <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter">
-                {stat.value}
-                {stat.suffix && <span className="text-sm sm:text-base text-slate-400 font-bold ml-2 uppercase">{stat.suffix}</span>}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 mb-12">
@@ -148,9 +153,7 @@ export default function DashboardPage() {
           </div>
 
           {attemptsLoading ? (
-            <div className="glass-card p-12 text-center bg-white border-slate-200">
-              <div className="spinner mx-auto" />
-            </div>
+            <ListSkeleton />
           ) : !recentAttempts || recentAttempts.length === 0 ? (
             <div className="glass-card p-12 text-center bg-white border-slate-200">
               <ClipboardList size={56} className="text-slate-200 mx-auto mb-4" />

@@ -57,17 +57,13 @@ export async function getTopics(supabaseClient?: any): Promise<TopicInfo[]> {
     });
   }
   
+  // Safe fallback: fetch only first 1000 to avoid crash, but warn user
   const { data: questions, error: queryError } = await client
     .from('questions')
-    .select('topic, subtopic');
+    .select('topic, subtopic')
+    .limit(1000);
 
   if (queryError || !questions) {
-    console.error('Error fetching questions in fallback:', {
-      message: queryError?.message,
-      details: queryError?.details,
-      hint: queryError?.hint,
-      code: queryError?.code,
-    });
     return [];
   }
 

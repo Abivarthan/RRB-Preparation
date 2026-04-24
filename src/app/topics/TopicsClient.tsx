@@ -16,6 +16,7 @@ import type { TopicInfo, Test } from '@/lib/types';
 import { useQuery } from '@tanstack/react-query';
 import { getTestsByTopic } from '@/lib/api';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import Skeleton, { ListSkeleton } from '@/components/Skeleton';
 
 const topicIcons: Record<string, any> = {
   Arithmetic: Calculator,
@@ -101,7 +102,7 @@ export default function TopicsClient({ initialTopics }: { initialTopics: TopicIn
       <h1 className="text-3xl sm:text-4xl font-black mb-8 text-slate-900">{selectedTopic} <span className="text-indigo-600">Tests</span></h1>
 
       {testsLoading ? (
-        <LoadingSpinner message="Curating available tests..." />
+        <ListSkeleton />
       ) : (
         <div className="grid gap-4 sm:gap-5">
           {tests?.map((test: Test, i: number) => (
