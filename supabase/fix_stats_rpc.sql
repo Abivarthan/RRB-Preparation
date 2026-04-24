@@ -1,12 +1,13 @@
 -- ============================================
--- Atomic Stats Update Function
+-- Atomic Stats Update Function (v3 - with Answers)
 -- ============================================
 
 CREATE OR REPLACE FUNCTION submit_test_attempt(
   p_attempt_id UUID,
   p_score INTEGER,
   p_accuracy REAL,
-  p_time_taken INTEGER
+  p_time_taken INTEGER,
+  p_answers JSONB DEFAULT '[]'::jsonb
 ) RETURNS JSONB AS $$
 DECLARE
   v_user_id UUID;
@@ -39,7 +40,22 @@ BEGIN
     RETURN v_result;
   END IF;
 
-  -- 2. Update the attempt
+  -- 2. Save/Update answers from the JSON array
+  -- Expected format: [{question_id, selected_answer, is_correct}]
+  IF jsonb_array_length(p_answers) > 0 THEN
+    INSERT INTO attempt_answers (attempt_id, question_id, selected_answer, is_correct)
+    SELECT 
+      p_attempt_id, 
+      (val->>'question_id')::UUID, 
+      (val->>'selected_answer')::TEXT, 
+      (val->>'is_correct')::BOOLEAN
+    FROM jsonb_array_elements(p_answers) AS val
+    ON CONFLICT (attempt_id, question_id) DO UPDATE SET
+      selected_answer = EXCLUDED.selected_answer,
+      is_correct = EXCLUDED.is_correct;
+  END IF;
+
+  -- 3. Update the attempt
   UPDATE attempts
   SET 
     score = p_score,
@@ -49,12 +65,12 @@ BEGIN
     completed_at = NOW()
   WHERE id = p_attempt_id;
 
-  -- 3. Update profile stats atomically
+  -- 4. Update profile stats atomically
   -- Get current streak info
   SELECT streak_count, last_active_date INTO v_streak, v_last_active
   FROM profiles WHERE user_id = v_user_id;
 
-  -- 4. Streak Logic
+  -- 5. Streak Logic
   IF v_last_active IS NULL THEN
     v_streak := 1;
   ELSIF v_last_active = v_today THEN
@@ -67,7 +83,7 @@ BEGIN
     v_streak := 1;
   END IF;
 
-  -- 5. Update profile (using upsert to be safe)
+  -- 6. Update profile (using upsert to be safe)
   INSERT INTO profiles (user_id, total_score, tests_attempted, streak_count, last_active_date)
   VALUES (v_user_id, p_score, 1, v_streak, v_today)
   ON CONFLICT (user_id) DO UPDATE SET

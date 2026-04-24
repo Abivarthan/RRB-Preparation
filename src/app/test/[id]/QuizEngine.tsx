@@ -57,8 +57,8 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
   });
 
   const submitMutation = useMutation({
-    mutationFn: (data: { attemptId: string, userId: string, score: number, accuracy: number, timeTaken: number }) =>
-      submitAttempt(data.attemptId, data.userId, data.score, data.accuracy, data.timeTaken),
+    mutationFn: (data: { attemptId: string, userId: string, score: number, accuracy: number, timeTaken: number, answers: any[] }) =>
+      submitAttempt(data.attemptId, data.userId, data.score, data.accuracy, data.timeTaken, data.answers),
     onSuccess: (data: any) => {
       if (attempt) localStorage.removeItem(`quiz_progress_${attempt.id}`);
       
@@ -81,8 +81,9 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
       toast.success('Test submitted successfully!');
       router.push(`/result/${attempt!.id}`);
     },
-    onError: () => {
-      toast.error('Submission failed. Please try again.');
+    onError: (error: any) => {
+      console.error('Submission Error Details:', error);
+      toast.error(error.message || 'Submission failed. Please try again.');
     }
   });
 
@@ -215,22 +216,35 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
   };
 
   const handleSubmit = useCallback(async () => {
-    if (submitMutation.isPending || !attempt) return;
+    if (submitMutation.isPending || !attempt || !userId) {
+      if (!userId) toast.error("Authentication required to submit.");
+      return;
+    }
+
+    // Map all answers to match the RPC structure
+    const mappedAnswers = initialQuestions.map(q => ({
+      question_id: q.id,
+      selected_answer: answers[q.id] || null,
+      is_correct: answers[q.id] === q.correct_answer
+    })).filter(a => a.selected_answer !== null); // Only send questions that were actually answered
 
     let score = 0;
     initialQuestions.forEach(q => {
       if (answers[q.id] === q.correct_answer) score++;
     });
 
-    const accuracy = (score / initialQuestions.length) * 100;
+    const accuracy = initialQuestions.length > 0 ? (score / initialQuestions.length) * 100 : 0;
     const timeTaken = Math.floor((Date.now() - startedAtRef.current) / 1000);
+
+    console.log('Initiating submission...', { score, accuracy, answersCount: mappedAnswers.length });
 
     submitMutation.mutate({ 
       attemptId: attempt.id, 
       userId, 
       score, 
       accuracy, 
-      timeTaken 
+      timeTaken,
+      answers: mappedAnswers
     });
   }, [answers, initialQuestions, userId, attempt, submitMutation]);
 

@@ -176,19 +176,21 @@ export async function submitAttempt(
   userId: string,
   score: number,
   accuracy: number,
-  timeTaken: number
+  timeTaken: number,
+  answers: any[] = []
 ): Promise<any> {
   // Call atomic RPC to update everything in one transaction
   const { data, error } = await supabase.rpc('submit_test_attempt', {
     p_attempt_id: attemptId,
     p_score: Math.round(score),
     p_accuracy: accuracy,
-    p_time_taken: timeTaken
+    p_time_taken: timeTaken,
+    p_answers: answers
   });
 
   if (error) {
-    console.error('Supabase RPC Error:', error);
-    throw error;
+    console.error('Supabase RPC Error (Submission):', error);
+    throw new Error(`Database Error: ${error.message}`);
   }
 
   // Check for logical error returned in JSON
