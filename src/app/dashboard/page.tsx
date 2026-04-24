@@ -80,7 +80,7 @@ export default function DashboardPage() {
   return (
     <>
       <Navbar />
-      <main className="pt-24 sm:pt-32 pb-24 sm:pb-32 px-3 sm:px-6 max-w-3xl mx-auto min-h-screen flex flex-col">
+      <main className="pt-24 sm:pt-32 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Welcome */}
         <div className="mb-10 animate-fadeIn">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-black mb-3 text-slate-900 tracking-tight">
@@ -90,25 +90,25 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-12 stagger-children">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12 stagger-children">
           {stats.map((stat, i) => (
             <div key={i} className="stat-card group hover:shadow-xl transition-shadow border-slate-200">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4 sm:mb-5">
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg shadow-black/10`}>
-                  <stat.icon size={18} className="text-white sm:size-22" />
+              <div className="flex items-center gap-4 mb-5">
+                <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-lg shadow-black/10`}>
+                  <stat.icon size={22} className="text-white" />
                 </div>
-                <span className="text-[10px] sm:text-sm text-slate-400 font-black uppercase tracking-widest">{stat.label}</span>
+                <span className="text-xs sm:text-sm text-slate-400 font-black uppercase tracking-widest">{stat.label}</span>
               </div>
-              <div className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tighter">
+              <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter">
                 {stat.value}
-                {stat.suffix && <span className="text-[10px] sm:text-base text-slate-400 font-bold ml-1 sm:ml-2 uppercase">{stat.suffix}</span>}
+                {stat.suffix && <span className="text-sm sm:text-base text-slate-400 font-bold ml-2 uppercase">{stat.suffix}</span>}
               </div>
             </div>
           ))}
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8 mb-12">
           <Link href="/topics" className="glass-card p-6 sm:p-10 flex items-center gap-6 group relative overflow-hidden bg-white border-slate-200 hover:border-indigo-200">
             <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-50 rounded-full -mr-24 -mt-24 transition-transform group-hover:scale-110" />
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-indigo-600 flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110 shadow-2xl shadow-indigo-600/20 relative z-10">

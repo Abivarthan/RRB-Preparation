@@ -354,7 +354,7 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
       </div>
 
       {/* Optimized Main Content Area */}
-      <main className="pt-24 sm:pt-32 pb-24 sm:pb-32 px-3 sm:px-6 max-w-3xl mx-auto min-h-screen flex flex-col">
+      <main className="pt-24 sm:pt-32 pb-24 sm:pb-32 px-4 max-w-3xl mx-auto min-h-screen flex flex-col">
         <div className="animate-fadeIn flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-6 sm:mb-8">
             <span className="text-[10px] sm:text-xs font-black px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 uppercase tracking-widest border border-indigo-100 shadow-sm">
