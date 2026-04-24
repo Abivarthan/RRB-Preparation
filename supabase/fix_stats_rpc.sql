@@ -30,11 +30,10 @@ BEGIN
     SELECT jsonb_build_object(
       'success', true,
       'already_submitted', true,
-      'profile', json_build_object(
-        'total_score', total_score,
-        'tests_attempted', tests_attempted,
-        'streak_count', streak_count
-      )
+      'total_score', total_score,
+      'tests_attempted', tests_attempted,
+      'streak_count', streak_count,
+      'last_active_date', last_active_date
     ) INTO v_result
     FROM profiles WHERE user_id = v_user_id;
     RETURN v_result;
@@ -68,14 +67,14 @@ BEGIN
     v_streak := 1;
   END IF;
 
-  -- 5. Update profile
-  UPDATE profiles
-  SET
-    total_score = total_score + p_score,
-    tests_attempted = tests_attempted + 1,
+  -- 5. Update profile (using upsert to be safe)
+  INSERT INTO profiles (user_id, total_score, tests_attempted, streak_count, last_active_date)
+  VALUES (v_user_id, p_score, 1, v_streak, v_today)
+  ON CONFLICT (user_id) DO UPDATE SET
+    total_score = profiles.total_score + p_score,
+    tests_attempted = profiles.tests_attempted + 1,
     streak_count = v_streak,
     last_active_date = v_today
-  WHERE user_id = v_user_id
   RETURNING jsonb_build_object(
     'success', true,
     'total_score', total_score,

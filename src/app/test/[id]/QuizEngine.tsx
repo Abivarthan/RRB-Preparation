@@ -57,8 +57,8 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
   });
 
   const submitMutation = useMutation({
-    mutationFn: (data: { score: number, accuracy: number, timeTaken: number }) =>
-      submitAttempt(attempt!.id, userId, data.score, data.accuracy, data.timeTaken),
+    mutationFn: (data: { attemptId: string, userId: string, score: number, accuracy: number, timeTaken: number }) =>
+      submitAttempt(data.attemptId, data.userId, data.score, data.accuracy, data.timeTaken),
     onSuccess: (data: any) => {
       if (attempt) localStorage.removeItem(`quiz_progress_${attempt.id}`);
       
@@ -215,7 +215,7 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
   };
 
   const handleSubmit = useCallback(async () => {
-    if (submitMutation.isPending) return;
+    if (submitMutation.isPending || !attempt) return;
 
     let score = 0;
     initialQuestions.forEach(q => {
@@ -225,7 +225,13 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
     const accuracy = (score / initialQuestions.length) * 100;
     const timeTaken = Math.floor((Date.now() - startedAtRef.current) / 1000);
 
-    submitMutation.mutate({ score, accuracy, timeTaken });
+    submitMutation.mutate({ 
+      attemptId: attempt.id, 
+      userId, 
+      score, 
+      accuracy, 
+      timeTaken 
+    });
   }, [answers, initialQuestions, userId, attempt, submitMutation]);
 
   const handleAutoSubmit = useCallback(() => {
