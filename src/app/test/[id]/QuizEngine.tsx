@@ -49,6 +49,7 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startedAtRef = useRef<number>(Date.now());
+  const hasAutoSubmitted = useRef(false);
 
   // Mutations for efficiency and caching
   const saveAnswerMutation = useMutation({
@@ -249,6 +250,8 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
   }, [answers, initialQuestions, userId, attempt, submitMutation]);
 
   const handleAutoSubmit = useCallback(() => {
+    if (hasAutoSubmitted.current) return;
+    hasAutoSubmitted.current = true;
     toast.error('Time is up! Submitting your answers...', { duration: 4000 });
     handleSubmit();
   }, [handleSubmit]);
@@ -327,21 +330,26 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-5">
-            <div className={`flex items-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-2xl border transition-all shadow-sm ${
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className={`flex items-center gap-2 px-3 sm:px-4 h-10 sm:h-12 rounded-xl sm:rounded-2xl border transition-all shadow-sm ${
               timeRemaining < 60 ? 'bg-red-50 border-red-200 text-red-600 animate-pulse' : 'bg-slate-50 border-slate-200 text-slate-900'
             }`}>
-              <Clock size={16} className="sm:size-18" />
-              <span className="font-mono font-black text-lg sm:text-xl tracking-tighter">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="font-mono font-black text-base sm:text-xl tracking-tighter">
                 {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, '0')}
               </span>
             </div>
             <button 
               onClick={() => setShowConfirm(true)} 
-              className="btn-primary py-2 sm:py-3 px-4 sm:px-7 shadow-lg shadow-indigo-600/20 text-xs sm:text-sm font-black uppercase tracking-widest"
+              className="btn-primary h-10 sm:h-12 px-4 sm:px-6 shadow-lg shadow-indigo-600/20 text-[10px] sm:text-xs font-black uppercase tracking-widest"
               disabled={submitMutation.isPending}
             >
-              {submitMutation.isPending ? '...' : <><Send size={16} className="sm:size-18" /> <span className="hidden xs:inline">Submit</span></>}
+              {submitMutation.isPending ? '...' : (
+                <>
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                  <span className="hidden sm:inline">Submit</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -402,9 +410,11 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
           <button
             disabled={currentIndex === 0}
             onClick={() => setCurrentIndex(prev => prev - 1)}
-            className="flex-1 sm:flex-none btn-secondary h-12 sm:h-auto px-5 sm:px-10 py-3 disabled:opacity-30 disabled:cursor-not-allowed text-sm sm:text-base font-black uppercase tracking-widest active:scale-95"
+            className="flex-1 sm:flex-none btn-secondary h-12 px-4 sm:px-8 disabled:opacity-30 disabled:cursor-not-allowed text-xs sm:text-sm font-black uppercase tracking-widest active:scale-95"
           >
-            <ChevronLeft size={22} /> <span className="hidden xs:inline">Prev</span><span className="hidden sm:inline">ious</span>
+            <ChevronLeft className="w-5 h-5 mr-1" />
+            <span className="sm:hidden">Prev</span>
+            <span className="hidden sm:inline">Previous</span>
           </button>
 
           <button 
@@ -422,16 +432,18 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
           {currentIndex === initialQuestions.length - 1 ? (
              <button 
               onClick={() => setShowConfirm(true)} 
-              className="flex-1 sm:flex-none btn-success h-12 sm:h-auto px-5 sm:px-10 py-3 shadow-lg shadow-emerald-600/20 text-sm sm:text-base font-black uppercase tracking-widest active:scale-95"
+              className="flex-1 sm:flex-none btn-success h-12 px-6 sm:px-10 shadow-lg shadow-emerald-600/20 text-xs sm:text-sm font-black uppercase tracking-widest active:scale-95"
              >
                Finish Test
              </button>
           ) : (
             <button 
               onClick={() => setCurrentIndex(prev => prev + 1)} 
-              className="flex-1 sm:flex-none btn-primary h-12 sm:h-auto px-5 sm:px-10 py-3 shadow-lg shadow-indigo-600/20 text-sm sm:text-base font-black uppercase tracking-widest active:scale-95"
+              className="flex-1 sm:flex-none btn-primary h-12 px-6 sm:px-10 shadow-lg shadow-indigo-600/20 text-xs sm:text-sm font-black uppercase tracking-widest active:scale-95"
             >
-              Next <ChevronRight size={22} />
+              <span className="sm:hidden">Next</span>
+              <span className="hidden sm:inline">Next Question</span>
+              <ChevronRight className="w-5 h-5 ml-1" />
             </button>
           )}
         </div>
