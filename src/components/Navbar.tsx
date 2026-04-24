@@ -38,11 +38,11 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo */}
-          <Link href="/dashboard" className="flex items-center gap-3 group shrink-0">
-            <div className="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center shadow-lg shadow-indigo-500/20 transition-transform group-hover:scale-110">
-              <GraduationCap size={22} className="text-white" />
+          <Link href="/dashboard" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl gradient-accent flex items-center justify-center shadow-lg shadow-indigo-500/20 transition-transform group-hover:scale-110">
+              <GraduationCap size={18} className="text-white sm:size-22" />
             </div>
-            <span className="font-black text-xl sm:text-2xl tracking-tight text-slate-900">
+            <span className="font-black text-lg sm:text-2xl tracking-tight text-slate-900">
               RRB <span className="text-indigo-600">Prep</span>
             </span>
           </Link>
