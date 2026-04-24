@@ -4,9 +4,20 @@ import { cookies } from 'next/headers';
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
+    const errorMsg = 'CRITICAL: Supabase environment variables are missing. Check your server-side environment configuration.';
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(errorMsg);
+    }
+    console.error(errorMsg);
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key',
+    supabaseUrl || 'https://missing-url.supabase.co',
+    supabaseKey || 'missing-key',
     {
       cookies: {
         getAll() {
