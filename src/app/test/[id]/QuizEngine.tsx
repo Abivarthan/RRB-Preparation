@@ -59,8 +59,23 @@ export default function QuizEngine({ initialTest, initialQuestions, userId }: Qu
   const submitMutation = useMutation({
     mutationFn: (data: { score: number, accuracy: number, timeTaken: number }) =>
       submitAttempt(attempt!.id, userId, data.score, data.accuracy, data.timeTaken),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       if (attempt) localStorage.removeItem(`quiz_progress_${attempt.id}`);
+      
+      // Optimistic/Immediate cache update for profile stats
+      if (data && !data.error) {
+        queryClient.setQueryData(['profile', userId], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            total_score: data.total_score,
+            tests_attempted: data.tests_attempted,
+            streak_count: data.streak_count,
+            last_active_date: data.last_active_date,
+          };
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ['recentAttempts', userId] });
       queryClient.invalidateQueries({ queryKey: ['profile', userId] });
       toast.success('Test submitted successfully!');

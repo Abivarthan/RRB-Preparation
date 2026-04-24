@@ -177,7 +177,7 @@ export async function submitAttempt(
   score: number,
   accuracy: number,
   timeTaken: number
-): Promise<void> {
+): Promise<any> {
   // Call atomic RPC to update everything in one transaction
   const { data, error } = await supabase.rpc('submit_test_attempt', {
     p_attempt_id: attemptId,
@@ -196,6 +196,8 @@ export async function submitAttempt(
     console.error('Logic Error in RPC:', data.error);
     throw new Error(data.error as string);
   }
+
+  return data;
 }
 
 export async function getAttempt(attemptId: string): Promise<Attempt | null> {
