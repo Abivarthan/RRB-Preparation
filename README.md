@@ -1,154 +1,137 @@
 # Complete Guide
 
-Welcome to the official documentation for the **RRB Exam Preparation Platform**. This comprehensive guide provides a deep dive into the architecture, design, and implementation of a high-performance exam engine built for scalability and a premium user experience.
+Welcome to the **RRB Exam Preparation Platform** technical guide. This document is designed for developers and product engineers to understand the system architecture, core logic, and design principles of the application.
 
 ---
 
-## 📖 Project Overview
-The RRB Exam Preparation Platform is a specialized web application designed to help railway aspirants master their exams. It features a massive dataset of ~90,000 questions, an immersive testing environment, and real-time performance tracking.
+## 🏗️ 1. Project Overview
+A high-performance exam simulation platform built for railway aspirants. It handles a massive database of **90,000+ questions** with sub-second retrieval times and provides a secure, distraction-free environment for mock exams.
 
-## 🚀 Key Features
-- **Topic-Wise Tests**: Fixed-set practicing on specific subjects with non-repeating question logic.
-- **Full Mock Exams**: Dynamically generated 50-question papers with balanced topic distribution.
-- **Pro Quiz Engine**:
-  - Precision Timer (IST-synchronized).
-  - Navigation Control (Prevents accidental exit).
-  - Immersive Fullscreen Mode.
-  - Question Grid for quick review.
-- **Real-Time Analytics**: Instant updates to scores, accuracy, and daily streaks.
-- **Global Leaderboard**: Competitive ranking based on total performance.
-- **Responsive Mastery**: Fluid UI that feels native on both mobile and desktop.
+### Key Features
+- **Intelligent Test Generation**: Mixed mock tests and focused topic drills.
+- **Proctor-Ready Engine**: Fullscreen enforcement and navigation trapping.
+- **Atomic Stats**: Real-time updates to user profiles using database-level transactions.
+- **Persistence**: Auto-save progress to survive browser crashes or accidental refreshes.
 
 ---
 
-## 🛠️ Tech Stack
-- **Framework**: [Next.js 16](https://nextjs.org/) (App Router & Turbopack)
-- **Styling**: [Tailwind CSS 4.0](https://tailwindcss.com/)
-- **Backend/Database**: [Supabase](https://supabase.com/) (Auth, PostgreSQL, RPC, RLS)
-- **State Management**: [TanStack Query v5](https://tanstack.com/query/latest)
-- **Icons**: Lucide React
-- **Notifications**: React Hot Toast
+## 🛠️ 2. Tech Stack
+- **Framework**: Next.js 16 (App Router)
+- **Database**: PostgreSQL (via Supabase)
+- **State Management**: TanStack Query v5 (React Query)
+- **Styling**: Tailwind CSS 4.0
+- **Auth**: Supabase Auth (with SSR support)
 
 ---
 
-## 🏗️ System Architecture
-The application follows a **Decoupled-Atomic** architecture:
-1.  **Frontend**: Next.js Server Components handle initial data fetching for SEO and speed.
-2.  **Interaction Layer**: Client Components manage the complex quiz state using React Query for synchronization.
-3.  **Persistence Layer**: Supabase handles Auth and Database. 
-4.  **Logic Layer (RPC)**: Critical calculations (scoring, streaks, stat updates) are pushed to the database level via PL/pgSQL functions for atomicity and speed.
+## 🧠 3. Test Generation Logic
+
+The system distinguishes between **fixed** and **dynamic** tests to ensure a variety of learning paths.
+
+### A. Topic-Wise Tests (Focused Practice)
+- **Logic**: When a user selects a topic, the system checks for existing tests or generates a new one.
+- **Persistence**: Once generated, the relationship between the test and its questions is stored in `test_questions`. This ensures the same test ID always returns the same questions.
+
+### B. Mock Exams (Balanced Distribution)
+- **Algorithm**: Instead of purely random selection, the system:
+  1. Fetches all available topics via `get_topic_stats`.
+  2. Calculates `questions_per_topic` based on the target total.
+  3. Iterates through topics to pick a balanced set, ensuring the exam covers the entire syllabus.
+  4. Shuffles the final set to mimic real exam conditions.
+
+### C. Efficient Random Retrieval (`random_id`)
+To avoid the performance trap of `ORDER BY random()`, we use a custom `random_id` float column.
+- **How it works**: Questions are fetched where `random_id >= random()`. If not enough questions are found, it wraps around to `random_id < random()`.
+- **Result**: Question selection remains O(1) even with 100,000+ records.
 
 ---
 
-## 📊 Database Schema
-The schema is optimized for high-volume questions and concurrent test attempts.
+## 🔄 4. The Submission Lifecycle
 
-### Core Tables
-- **`profiles`**: User metadata, `total_score`, `tests_attempted`, and `streak_count`.
-- **`questions`**: 90k+ records. Includes `topic`, `difficulty`, and a `random_id` (float) for O(1) random selection.
-- **`tests`**: Definitions for both fixed and dynamic test types.
-- **`test_questions`**: Junction table for fixed-topic tests.
-- **`attempts`**: Records of started and completed test sessions.
-- **`attempt_answers`**: Logs of user choices vs correct answers.
+The most critical flow in the application is the transition from "Answering" to "Completed".
 
-### Security (RLS)
-Every table has **Row Level Security** enabled. Users can only read their own attempts and profiles, while questions and test definitions are globally readable for authenticated users.
-
----
-
-## 🧠 Test & Quiz Logic
-
-### 1. Question Retrieval
-- **Topic-Wise**: Fetches from the `test_questions` junction table to ensure a fixed, pre-defined experience.
-- **Mock Tests**: Uses the `get_random_questions_v2` RPC. It leverages the `random_id` index to pick a balanced distribution of questions across all topics in milliseconds, avoiding expensive `ORDER BY random()`.
-
-### 2. The Quiz Engine
-- **State Safety**: Answers and current index are synced to `localStorage`.
-- **Interruption Control**: Uses `popstate` and `beforeunload` listeners to trap navigation, ensuring users don't lose progress by accidentally hitting "Back".
+### Step-by-Step Data Flow
+1.  **Start**: User enters `/test/[id]`. A record is inserted into `attempts` (if not already existing).
+2.  **In-Progress**: Every time a user selects an option, `saveAnswer` is called. This records the choice in `attempt_answers` instantly.
+3.  **Submission**: User clicks "Confirm Submit".
+4.  **Atomic RPC Call**: The frontend calls the `submit_test_attempt` PostgreSQL function.
+    - **Step A**: Checks if the attempt is already submitted (prevents duplicates).
+    - **Step B**: Marks `is_submitted = true` and records `completed_at`.
+    - **Step C**: Updates `profiles` (increments `total_score` and `tests_attempted`).
+    - **Step D**: Calculates and updates `streak_count` based on IST date logic.
+5.  **Finalization**: The frontend invalidates the `profile` cache and redirects to `/result/[id]`.
 
 ---
 
-## ⚡ Submission & Streak System
+## 🔥 5. Streak & Stats Logic
 
-### Atomic Submission (RPC)
-When a user hits "Submit", a single call is made to the `submit_test_attempt` function:
-1.  **Validation**: Ensures the test hasn't been submitted already.
-2.  **Scoring**: Validates accuracy and time taken.
-3.  **Profile Update**: Atomically increments `total_score` and `tests_attempted`.
-4.  **Streak Calculation**:
-    - **Indian Standard Time (IST)**: All date logic is handled in `Asia/Kolkata` time.
-    - **Logic**:
-      - *Same Day*: Streak persists.
-      - *Consecutive Day*: Streak increments (+1).
-      - *Gap (>1 day)*: Streak resets to 1.
+The streak system is designed to encourage daily consistency without punishing users for multiple tests in one day.
+
+- **IST Synchronization**: All time calculations use `Asia/Kolkata` timezone to match the RRB exam schedule.
+- **Increment Rules**:
+  - **Same Day**: If `last_active_date` is today, stats update but streak stays same.
+  - **Next Day**: If `last_active_date` is yesterday, streak increments (+1).
+  - **Gap**: If `last_active_date` is older than 24 hours, streak resets to 1.
 
 ---
 
-## 🏎️ Performance Optimization
-- **Dataset Handling**: Questions are indexed by `topic` and `random_id`.
-- **Batch Ingestion**: Bulk import scripts in `/supabase` use JSON streaming to handle 90k+ rows without memory overflows.
-- **Optimistic UI**: React Query `setQueryData` is used to update dashboard stats instantly upon test completion, before the background refetch finishes.
+## 🛡️ 6. Security & Stability
+
+### Middleware & Proxy
+The project utilizes `src/proxy.ts` (the Next 16 middleware convention) to:
+- Intercept requests to protected routes (`/dashboard`, `/test`).
+- Validate the user session via Supabase SSR.
+- Redirect unauthorized users to `/login`.
+
+### Row Level Security (RLS)
+Database policies ensure that users can only view their own `attempts` and `profiles`. Public data like `questions` is restricted to authenticated roles only.
 
 ---
 
-## 🎨 UI/UX Design System
-The "RRB Premium" theme is characterized by:
-- **Palette**: Deep Slates (`#0f172a`), Indigo Accents (`#4f46e5`), and Emerald Success states.
-- **Glassmorphism**: Backdrop blurs (`blur-xl`) on navbars and modals for depth.
-- **Typography**: Inter Variable for maximum legibility.
-- **Feedback**: Active states, hover-scales, and smooth `cubic-bezier` transitions for all interactive elements.
+## 👨‍💻 7. Developer's Guide
 
----
-
-## 📂 Project Structure
+### Adding New Questions
+Questions can be added via the Supabase Dashboard or by running the bulk-import script:
 ```bash
-src/
-├── app/                  # Pages & Route Handlers
-│   ├── (auth)/           # Authentication routes
-│   ├── dashboard/        # User analytics hub
-│   ├── test/[id]/        # Immersive quiz engine
-│   └── proxy.ts          # Next 16 Middleware/Proxy
-├── components/           # UI Atomic Design (Navbar, Spinner, etc.)
-├── lib/                  # Services & Shared Logic
-│   ├── api.ts            # Centralized API logic
-│   └── supabase/         # Client & Server initializers
-└── providers/            # Auth & Query Context providers
+npx ts-node supabase/bulk-import.ts
 ```
+
+### Modifying Scoring Logic
+To change how scores are calculated (e.g., adding negative marking), modify the `submit_test_attempt` function in `supabase/fix_stats_rpc.sql` and the calculation in `src/app/test/[id]/QuizEngine.tsx`.
+
+### Creating New Tests
+Topic tests are generated dynamically in `src/lib/api.ts` using the `generateTopicTest` function. You can adjust the `questionCount` parameter there.
 
 ---
 
-## 🛠️ Getting Started
+## 🆘 8. Troubleshooting (Common Issues)
 
-### 1. Prerequisites
-- Node.js 20+
-- Supabase Account
+| Issue | Cause | Fix |
+| :--- | :--- | :--- |
+| **Submission Failed** | RPC not found or Attempt ID mismatch | Ensure `fix_stats_rpc.sql` is run in Supabase SQL editor. |
+| **Failed to Fetch** | Incorrect Supabase URL/Key | Check `.env.local` for missing `NEXT_PUBLIC_` prefix. |
+| **EPERM: Permission Denied** | File lock on Windows | Close the dev server (`Ctrl+C`) before running `npm run build`. |
+| **Hydration Mismatch** | Server/Client date difference | Ensure all date components use `useEffect` to render on client only. |
 
-### 2. Environment Variables
-Create a `.env.local` file:
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-```
+---
 
-### 3. Installation
+## 🚀 9. Setup & Deployment
+
+### 1. Local Setup
 ```bash
 npm install
 npm run dev
 ```
 
----
+### 2. Environment Configuration
+Ensure `.env.local` contains:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-## 🚢 Deployment Guide
-1.  **Database**: Run the `schema.sql` and `fix_stats_rpc.sql` in your Supabase SQL Editor.
-2.  **Environment**: Add your Supabase keys to Vercel/Deployment provider.
-3.  **Build**: Run `npm run build` to ensure all TypeScript and Lint checks pass.
-
----
-
-## 🆘 Common Issues & Fixes
-- **Failed to Fetch (Login)**: Ensure environment variables are not wrapped in quotes and have the correct `NEXT_PUBLIC_` prefix.
-- **EPERM (Build)**: Stop the development server before running `npm run build` on Windows systems.
-- **Middleware Deprecation**: The project has been migrated from `middleware.ts` to `proxy.ts` (Next 16 convention).
+### 3. Production Deployment
+- Connect your repo to **Vercel**.
+- Add the Environment Variables in the Vercel Dashboard.
+- Ensure your Supabase Database has all migrations from the `/supabase` folder applied.
 
 ---
-*Generated by Antigravity Technical Solutions.*
+*Maintained by the RRB Product Engineering Team.*
